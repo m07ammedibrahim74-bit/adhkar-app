@@ -17,139 +17,194 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
 class MainActivity : AppCompatActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
 
-        val layout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(50, 90, 50, 50)
-            setBackgroundResource(R.drawable.bg_islamic)
-        }
+    companion object {
+        private const val PREFS_NAME = "AdhkarPrefs"
+        private const val KEY_SELECTED_SOUND = "SELECTED_SOUND"
+        private const val KEY_ROTATE_MODE = "ROTATE_MODE"
+        private const val KEY_ENABLED = "ENABLED"
+        private const val REQ_POST_NOTIFICATIONS = 100
 
-        val textColor = Color.WHITE
-        val cardBgColor = Color.parseColor("#88062E22")
-
-        val title = TextView(this).apply {
-            text = "منبه الأذكار المجدول"
-            textSize = 22f
-            setTextColor(textColor)
-            setPadding(0, 0, 0, 24)
-        }
-
-        val prefs = getSharedPreferences("AdhkarPrefs", Context.MODE_PRIVATE)
-        val savedSound = prefs.getInt("SELECTED_SOUND", 1)
-        val savedRotate = prefs.getBoolean("ROTATE_MODE", true)
-
-        val radioGroup = RadioGroup(this).apply {
-            setPadding(16, 12, 16, 16)
-            background = GradientDrawable().apply {
-                setColor(cardBgColor)
-                cornerRadius = 24f
-            }
-        }
-
-        // غيّر الأسماء هنا إلى أسماء الأذكار الموافقة لملفات الصوت من 1 إلى 5
-        val names = listOf(
-            "الصلاة على النبي1",
-            "الصلاة على النبي2",
+        // يجب أن يتطابق ترتيب العناصر (1 إلى 5) مع ترتيب الأصوات في AudioPlayerService
+        private val ADHKAR_OPTIONS = listOf(
+            "الصلاة على النبي 1",
+            "الصلاة على النبي 2",
             "التسبيح 1",
             "التسبيح 2",
             "أحب الكلام إلى الله"
         )
+    }
 
-        names.forEachIndexed { index, name ->
-            val rb = RadioButton(this).apply {
-                text = name
-                id = index + 1
-                textSize = 17f
-                setTextColor(textColor)
-                buttonTintList = ColorStateList.valueOf(Color.parseColor("#A5D6A7"))
-                setPadding(12, 14, 12, 14)
-            }
-            radioGroup.addView(rb)
-            if (index + 1 == savedSound) radioGroup.check(rb.id)
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val savedSound = prefs.getInt(KEY_SELECTED_SOUND, 1).coerceIn(1, ADHKAR_OPTIONS.size)
+        val savedRotate = prefs.getBoolean(KEY_ROTATE_MODE, true)
+        val isEnabled = prefs.getBoolean(KEY_ENABLED, false)
+
+        val scrollView = ScrollView(this).apply {
+            fillViewport = true
+            setBackgroundResource(R.drawable.bg_islamic)
         }
 
-        fun styleActionButton(button: Button, fillHex: String) {
-            button.setTextColor(Color.WHITE)
-            button.background = GradientDrawable().apply {
-                setColor(Color.parseColor(fillHex))
-                cornerRadius = 24f
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(48, 84, 48, 56)
+        }
+
+        val textPrimary = Color.WHITE
+        val accentMint = ColorStateList.valueOf(Color.parseColor("#A5D6A7"))
+        val cardBg = Color.parseColor("#9905261D")
+
+        val title = TextView(this).apply {
+            text = "منبه الأذكار المجدول"
+            textSize = 23f
+            setTextColor(textPrimary)
+            setPadding(0, 0, 0, 10)
+        }
+
+        val statusBadge = TextView(this).apply {
+            text = if (isEnabled) {
+                "الحالة: مفعّل • المختار: ${ADHKAR_OPTIONS[savedSound - 1]}"
+            } else {
+                "الحالة: متوقف • المختار: ${ADHKAR_OPTIONS[savedSound - 1]}"
             }
+            textSize = 14f
+            setTextColor(Color.parseColor("#E8F5E9"))
+            setPadding(20, 12, 20, 12)
+            background = createRoundedBackground(cardBg, 20f)
             val params = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
-                topMargin = 16
+                bottomMargin = 20
             }
-            button.layoutParams = params
+            layoutParams = params
         }
 
-        val btnStart = Button(this).apply {
-            text = "تفعيل جميع المواعيد المجدولة"
-            textSize = 16f
+        val radioGroup = RadioGroup(this).apply {
+            setPadding(18, 14, 18, 14)
+            background = createRoundedBackground(cardBg, 24f)
         }
-        styleActionButton(btnStart, "#1B5E20")
 
-        val btnTest = Button(this).apply {
-            text = "تجربة الصوت المختار الآن"
-            textSize = 16f
+        ADHKAR_OPTIONS.forEachIndexed { index, label ->
+            val soundIndex = index + 1
+            val rb = RadioButton(this).apply {
+                text = label
+                id = soundIndex
+                textSize = 17f
+                setTextColor(textPrimary)
+                buttonTintList = accentMint
+                setPadding(12, 14, 12, 14)
+            }
+            radioGroup.addView(rb)
+            if (soundIndex == savedSound) {
+                radioGroup.check(rb.id)
+            }
         }
-        styleActionButton(btnTest, "#2E7D32")
 
-        val btnStop = Button(this).apply {
-            text = "إيقاف التنبيهات"
-            textSize = 16f
-        }
-        styleActionButton(btnStop, "#7F1D1D")
+        val btnStart = createActionButton("تفعيل جميع المواعيد المجدولة", "#1B5E20", topMargin = 24)
+        val btnTest = createActionButton("تجربة الصوت المختار الآن", "#2E7D32", topMargin = 14)
+        val btnStop = createActionButton("إيقاف التنبيهات", "#7F1D1D", topMargin = 14)
 
         layout.addView(title)
+        layout.addView(statusBadge)
         layout.addView(radioGroup)
         layout.addView(btnStart)
         layout.addView(btnTest)
         layout.addView(btnStop)
-        setContentView(layout)
+
+        scrollView.addView(layout)
+        setContentView(scrollView)
 
         requestPermissionsIfNeeded()
 
         btnStart.setOnClickListener {
-            val selected = radioGroup.checkedRadioButtonId.takeIf { it in 1..5 } ?: 1
+            val selected = getSelectedSoundIndex(radioGroup)
             prefs.edit()
-                .putInt("SELECTED_SOUND", selected)
-                .putBoolean("ROTATE_MODE", savedRotate)
-                .putBoolean("ENABLED", true)
+                .putInt(KEY_SELECTED_SOUND, selected)
+                .putBoolean(KEY_ROTATE_MODE, savedRotate)
+                .putBoolean(KEY_ENABLED, true)
                 .apply()
 
+            statusBadge.text = "الحالة: مفعّل • المختار: ${ADHKAR_OPTIONS[selected - 1]}"
             AdhkarReceiver.scheduleAll(this)
             Toast.makeText(this, "تم تفعيل جميع المواعيد المجدولة بنجاح", Toast.LENGTH_LONG).show()
         }
 
         btnTest.setOnClickListener {
-            val selected = radioGroup.checkedRadioButtonId.takeIf { it in 1..5 } ?: 1
+            val selected = getSelectedSoundIndex(radioGroup)
+            prefs.edit().putInt(KEY_SELECTED_SOUND, selected).apply()
+            statusBadge.text = "الحالة: ${if (prefs.getBoolean(KEY_ENABLED, false)) "مفعّل" else "متوقف"} • المختار: ${ADHKAR_OPTIONS[selected - 1]}"
+
             val intent = Intent(this, AudioPlayerService::class.java).apply {
                 putExtra("SOUND_INDEX", selected)
             }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent) else startService(intent)
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    startForegroundService(intent)
+                } else {
+                    startService(intent)
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this, "تعذر تشغيل الصوت حالياً", Toast.LENGTH_SHORT).show()
+            }
         }
 
         btnStop.setOnClickListener {
-            prefs.edit().putBoolean("ENABLED", false).apply()
+            val selected = getSelectedSoundIndex(radioGroup)
+            prefs.edit().putBoolean(KEY_ENABLED, false).apply()
+            statusBadge.text = "الحالة: متوقف • المختار: ${ADHKAR_OPTIONS[selected - 1]}"
+
             AdhkarReceiver.cancelSchedule(this)
-            stopService(Intent(this, AudioPlayerService::class.java))
+            try {
+                stopService(Intent(this, AudioPlayerService::class.java))
+            } catch (_: Exception) {
+            }
             Toast.makeText(this, "تم إيقاف التنبيهات", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun getSelectedSoundIndex(radioGroup: RadioGroup): Int {
+        return radioGroup.checkedRadioButtonId.takeIf { it in 1..ADHKAR_OPTIONS.size } ?: 1
+    }
+
+    private fun createRoundedBackground(color: Int, radius: Float): GradientDrawable {
+        return GradientDrawable().apply {
+            setColor(color)
+            cornerRadius = radius
+        }
+    }
+
+    private fun createActionButton(text: String, fillHex: String, topMargin: Int): Button {
+        return Button(this).apply {
+            this.text = text
+            textSize = 16f
+            setTextColor(Color.WHITE)
+            background = createRoundedBackground(Color.parseColor(fillHex), 24f)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                this.topMargin = topMargin
+            }
         }
     }
 
     private fun requestPermissionsIfNeeded() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 100)
+                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), REQ_POST_NOTIFICATIONS)
             }
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
             if (!alarmManager.canScheduleExactAlarms()) {
-                startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM))
+                try {
+                    startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM))
+                } catch (_: Exception) {
+                }
             }
         }
     }
