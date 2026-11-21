@@ -33,31 +33,35 @@ class AudioPlayerService : Service() {
     }
 
     private fun playAudio(index: Int) {
-        val resId = when (index) {
-            1 -> R.raw.dhikr_1
-            2 -> R.raw.dhikr_2
-            3 -> R.raw.dhikr_3
-            4 -> R.raw.dhikr_4
-            5 -> R.raw.dhikr_5
-            else -> R.raw.dhikr_1
-        }
+    val resId = when (index) {
+        1 -> R.raw.dhikr_1
+        2 -> R.raw.dhikr_2
+        3 -> R.raw.dhikr_3
+        4 -> R.raw.dhikr_4
+        5 -> R.raw.dhikr_5
+        else -> R.raw.dhikr_1
+    }
 
-        mediaPlayer?.release()
-        mediaPlayer = MediaPlayer.create(this, resId)?.apply {
-            setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                    .setUsage(AudioAttributes.USAGE_ALARM)
-                    .build()
-            )
-            setOnCompletionListener {
-                stopSelf()
-            }
-            start()
-        } ?: run {
+    mediaPlayer?.release()
+    val player = MediaPlayer.create(this, resId)
+    if (player == null) {
+        stopSelf()
+        return
+    }
+
+    mediaPlayer = player.apply {
+        setAudioAttributes(
+            AudioAttributes.Builder()
+                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                .setUsage(AudioAttributes.USAGE_ALARM)
+                .build()
+        )
+        setOnCompletionListener {
             stopSelf()
         }
+        start()
     }
+}
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
