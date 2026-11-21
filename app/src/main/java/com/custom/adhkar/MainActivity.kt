@@ -5,6 +5,8 @@ import android.app.AlarmManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
@@ -20,18 +22,30 @@ class MainActivity : AppCompatActivity() {
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(50, 90, 50, 50)
+            // غيّر bg_islamic إلى نفس اسم صورة الخلفية داخل res/drawable بدون امتداد
+            setBackgroundResource(R.drawable.background)
         }
+
+        val textColor = Color.WHITE
+        val subTextColor = Color.parseColor("#E8F5E9")
+        val cardBgColor = Color.parseColor("#88062E22")
 
         val title = TextView(this).apply {
             text = "منبه الأذكار المجدول"
-            textSize = 21f
+            textSize = 22f
+            setTextColor(textColor)
             setPadding(0, 0, 0, 14)
         }
 
         val scheduleInfo = TextView(this).apply {
             text = "ملف 1: رأس الساعة (:00) | ملف 2: الساعة وربع (:15)\nملف 3: 8:30 ص/م | ملف 4: 9:30 ص/م | ملف 5: 10:30 ص/م"
             textSize = 14f
-            setPadding(0, 0, 0, 24)
+            setTextColor(subTextColor)
+            setPadding(20, 16, 20, 20)
+            background = GradientDrawable().apply {
+                setColor(cardBgColor)
+                cornerRadius = 24f
+            }
         }
 
         val prefs = getSharedPreferences("AdhkarPrefs", Context.MODE_PRIVATE)
@@ -41,11 +55,19 @@ class MainActivity : AppCompatActivity() {
         val chkRotate = CheckBox(this).apply {
             text = "تبديل الملف الأول تلقائياً كل ساعة"
             textSize = 16f
+            setTextColor(textColor)
+            buttonTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#A5D6A7"))
             isChecked = savedRotate
-            setPadding(0, 0, 0, 20)
+            setPadding(12, 20, 12, 20)
         }
 
-        val radioGroup = RadioGroup(this)
+        val radioGroup = RadioGroup(this).apply {
+            setPadding(16, 12, 16, 16)
+            background = GradientDrawable().apply {
+                setColor(cardBgColor)
+                cornerRadius = 24f
+            }
+        }
         val names = listOf("الملف 1", "الملف 2", "الملف 3", "الملف 4", "الملف 5")
 
         names.forEachIndexed { index, name ->
@@ -53,26 +75,46 @@ class MainActivity : AppCompatActivity() {
                 text = name
                 id = index + 1
                 textSize = 17f
+                setTextColor(textColor)
+                buttonTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#A5D6A7"))
                 setPadding(12, 14, 12, 14)
             }
             radioGroup.addView(rb)
             if (index + 1 == savedSound) radioGroup.check(rb.id)
         }
 
+        fun styleActionButton(button: Button, fillHex: String) {
+            button.setTextColor(Color.WHITE)
+            button.background = GradientDrawable().apply {
+                setColor(Color.parseColor(fillHex))
+                cornerRadius = 24f
+            }
+            val params = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = 16
+            }
+            button.layoutParams = params
+        }
+
         val btnStart = Button(this).apply {
             text = "تفعيل جميع المواعيد المجدولة"
             textSize = 16f
         }
+        styleActionButton(btnStart, "#1B5E20")
 
         val btnTest = Button(this).apply {
             text = "تجربة الصوت المختار الآن"
             textSize = 16f
         }
+        styleActionButton(btnTest, "#2E7D32")
 
         val btnStop = Button(this).apply {
             text = "إيقاف التنبيهات"
             textSize = 16f
         }
+        styleActionButton(btnStop, "#7F1D1D")
 
         layout.addView(title)
         layout.addView(scheduleInfo)
