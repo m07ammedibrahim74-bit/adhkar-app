@@ -23,9 +23,15 @@ class MainActivity : AppCompatActivity() {
         }
 
         val title = TextView(this).apply {
-            text = "منبه الأذكار الدقيق (كل رأس ساعة)"
+            text = "منبه الأذكار المجدول"
             textSize = 21f
-            setPadding(0, 0, 0, 30)
+            setPadding(0, 0, 0, 14)
+        }
+
+        val scheduleInfo = TextView(this).apply {
+            text = "ملف 1: رأس الساعة (:00) | ملف 2: الساعة وربع (:15)\nملف 3: 8:30 ص/م | ملف 4: 9:30 ص/م | ملف 5: 10:30 ص/م"
+            textSize = 14f
+            setPadding(0, 0, 0, 24)
         }
 
         val prefs = getSharedPreferences("AdhkarPrefs", Context.MODE_PRIVATE)
@@ -33,7 +39,7 @@ class MainActivity : AppCompatActivity() {
         val savedRotate = prefs.getBoolean("ROTATE_MODE", true)
 
         val chkRotate = CheckBox(this).apply {
-            text = "تبديل الملفات الخمسة تلقائياً كل ساعة"
+            text = "تبديل الملف الأول تلقائياً كل ساعة"
             textSize = 16f
             isChecked = savedRotate
             setPadding(0, 0, 0, 20)
@@ -54,7 +60,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         val btnStart = Button(this).apply {
-            text = "تفعيل التنبيه على رأس كل ساعة"
+            text = "تفعيل جميع المواعيد المجدولة"
             textSize = 16f
         }
 
@@ -69,6 +75,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         layout.addView(title)
+        layout.addView(scheduleInfo)
         layout.addView(chkRotate)
         layout.addView(radioGroup)
         layout.addView(btnStart)
@@ -86,8 +93,8 @@ class MainActivity : AppCompatActivity() {
                 .putBoolean("ENABLED", true)
                 .apply()
 
-            AdhkarReceiver.scheduleNextHour(this)
-            Toast.makeText(this, "تم التفعيل! سيبدأ عند رأس الساعة القادمة في الثانية 0", Toast.LENGTH_LONG).show()
+            AdhkarReceiver.scheduleAll(this)
+            Toast.makeText(this, "تم تفعيل جميع المواعيد المجدولة بنجاح", Toast.LENGTH_LONG).show()
         }
 
         btnTest.setOnClickListener {
