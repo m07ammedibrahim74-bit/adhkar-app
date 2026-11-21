@@ -50,7 +50,7 @@ class MainActivity : AppCompatActivity() {
 
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(48, 84, 48, 56)
+            setPadding(48, 64, 48, 56)
         }
 
         val textPrimary = Color.WHITE
@@ -58,30 +58,40 @@ class MainActivity : AppCompatActivity() {
         val cardBg = Color.parseColor("#9905261D")
 
         val title = TextView(this).apply {
-            text = "منبه الأذكار المجدول"
-            textSize = 23f
+            text = "ميراث النبي (تصميم محمد الدسوقي)"
+            textSize = 24f
             setTextColor(textPrimary)
-            setPadding(0, 0, 0, 10)
+            setPadding(0, 0, 0, 12)
         }
 
-        val statusBadge = TextView(this).apply {
-            text = if (isEnabled) {
-                "الحالة: مفعّل • المختار: ${ADHKAR_OPTIONS[savedSound - 1]}"
-            } else {
-                "الحالة: متوقف • المختار: ${ADHKAR_OPTIONS[savedSound - 1]}"
-            }
-            textSize = 14f
-            setTextColor(Color.parseColor("#E8F5E9"))
-            setPadding(20, 12, 20, 12)
-            background = createRoundedBackground(cardBg, 20f)
-            val params = LinearLayout.LayoutParams(
+        val statusCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(22, 16, 22, 16)
+            background = createRoundedBackground(cardBg, 24f)
+            layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
                 bottomMargin = 20
             }
-            layoutParams = params
         }
+
+        val tvState = TextView(this).apply {
+            text = formatStateLine(isEnabled)
+            textSize = 16f
+            setTextColor(textPrimary)
+            setPadding(12, 8, 12, 8)
+        }
+
+        val tvSelected = TextView(this).apply {
+            text = formatSelectedLine(ADHKAR_OPTIONS[savedSound - 1])
+            textSize = 16f
+            setTextColor(Color.parseColor("#E8F5E9"))
+            setPadding(12, 8, 12, 8)
+        }
+
+        statusCard.addView(tvState)
+        statusCard.addView(tvSelected)
 
         val radioGroup = RadioGroup(this).apply {
             setPadding(18, 14, 18, 14)
@@ -109,7 +119,7 @@ class MainActivity : AppCompatActivity() {
         val btnStop = createActionButton("إيقاف التنبيهات", "#7F1D1D", topMargin = 14)
 
         layout.addView(title)
-        layout.addView(statusBadge)
+        layout.addView(statusCard)
         layout.addView(radioGroup)
         layout.addView(btnStart)
         layout.addView(btnTest)
@@ -128,15 +138,16 @@ class MainActivity : AppCompatActivity() {
                 .putBoolean(KEY_ENABLED, true)
                 .apply()
 
-            statusBadge.text = "الحالة: مفعّل • المختار: ${ADHKAR_OPTIONS[selected - 1]}"
+            updateStatusViews(tvState, tvSelected, true, ADHKAR_OPTIONS[selected - 1])
             AdhkarReceiver.scheduleAll(this)
             Toast.makeText(this, "تم تفعيل جميع المواعيد المجدولة بنجاح", Toast.LENGTH_LONG).show()
         }
 
         btnTest.setOnClickListener {
             val selected = getSelectedSoundIndex(radioGroup)
+            val currentlyEnabled = prefs.getBoolean(KEY_ENABLED, false)
             prefs.edit().putInt(KEY_SELECTED_SOUND, selected).apply()
-            statusBadge.text = "الحالة: ${if (prefs.getBoolean(KEY_ENABLED, false)) "مفعّل" else "متوقف"} • المختار: ${ADHKAR_OPTIONS[selected - 1]}"
+            updateStatusViews(tvState, tvSelected, currentlyEnabled, ADHKAR_OPTIONS[selected - 1])
 
             val intent = Intent(this, AudioPlayerService::class.java).apply {
                 putExtra("SOUND_INDEX", selected)
@@ -147,7 +158,7 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     startService(intent)
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 Toast.makeText(this, "تعذر تشغيل الصوت حالياً", Toast.LENGTH_SHORT).show()
             }
         }
@@ -155,7 +166,7 @@ class MainActivity : AppCompatActivity() {
         btnStop.setOnClickListener {
             val selected = getSelectedSoundIndex(radioGroup)
             prefs.edit().putBoolean(KEY_ENABLED, false).apply()
-            statusBadge.text = "الحالة: متوقف • المختار: ${ADHKAR_OPTIONS[selected - 1]}"
+            updateStatusViews(tvState, tvSelected, false, ADHKAR_OPTIONS[selected - 1])
 
             AdhkarReceiver.cancelSchedule(this)
             try {
@@ -164,6 +175,19 @@ class MainActivity : AppCompatActivity() {
             }
             Toast.makeText(this, "تم إيقاف التنبيهات", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun updateStatusViews(tvState: TextView, tvSelected: TextView, isEnabled: Boolean, selectedAdhkar: String) {
+        tvState.text = formatStateLine(isEnabled)
+        tvSelected.text = formatSelectedLine(selectedAdhkar)
+    }
+
+    private fun formatStateLine(isEnabled: Boolean): String {
+        return if (isEnabled) "الحالة: مفعّل" else "الحالة: متوقف"
+    }
+
+    private fun formatSelectedLine(selectedAdhkar: String): String {
+        return "المختار: $selectedAdhkar"
     }
 
     private fun getSelectedSoundIndex(radioGroup: RadioGroup): Int {
