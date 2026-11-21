@@ -5,6 +5,7 @@ import android.app.AlarmManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
@@ -22,44 +23,22 @@ class MainActivity : AppCompatActivity() {
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(50, 90, 50, 50)
-            // غيّر bg_islamic إلى نفس اسم صورة الخلفية داخل res/drawable بدون امتداد
-            setBackgroundResource(R.drawable.background)
+            setBackgroundResource(R.drawable.bg_islamic)
         }
 
         val textColor = Color.WHITE
-        val subTextColor = Color.parseColor("#E8F5E9")
         val cardBgColor = Color.parseColor("#88062E22")
 
         val title = TextView(this).apply {
             text = "منبه الأذكار المجدول"
             textSize = 22f
             setTextColor(textColor)
-            setPadding(0, 0, 0, 14)
-        }
-
-        val scheduleInfo = TextView(this).apply {
-            text = "ملف 1: رأس الساعة (:00) | ملف 2: الساعة وربع (:15)\nملف 3: 8:30 ص/م | ملف 4: 9:30 ص/م | ملف 5: 10:30 ص/م"
-            textSize = 14f
-            setTextColor(subTextColor)
-            setPadding(20, 16, 20, 20)
-            background = GradientDrawable().apply {
-                setColor(cardBgColor)
-                cornerRadius = 24f
-            }
+            setPadding(0, 0, 0, 24)
         }
 
         val prefs = getSharedPreferences("AdhkarPrefs", Context.MODE_PRIVATE)
         val savedSound = prefs.getInt("SELECTED_SOUND", 1)
         val savedRotate = prefs.getBoolean("ROTATE_MODE", true)
-
-        val chkRotate = CheckBox(this).apply {
-            text = "تبديل الملف الأول تلقائياً كل ساعة"
-            textSize = 16f
-            setTextColor(textColor)
-            buttonTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#A5D6A7"))
-            isChecked = savedRotate
-            setPadding(12, 20, 12, 20)
-        }
 
         val radioGroup = RadioGroup(this).apply {
             setPadding(16, 12, 16, 16)
@@ -68,7 +47,15 @@ class MainActivity : AppCompatActivity() {
                 cornerRadius = 24f
             }
         }
-        val names = listOf("الملف 1", "الملف 2", "الملف 3", "الملف 4", "الملف 5")
+
+        // غيّر الأسماء هنا إلى أسماء الأذكار الموافقة لملفات الصوت من 1 إلى 5
+        val names = listOf(
+            "الصلاة على النبي1",
+            "الصلاة على النبي2",
+            "التسبيح 1",
+            "التسبيح 2",
+            "أحب الكلام إلى الله"
+        )
 
         names.forEachIndexed { index, name ->
             val rb = RadioButton(this).apply {
@@ -76,7 +63,7 @@ class MainActivity : AppCompatActivity() {
                 id = index + 1
                 textSize = 17f
                 setTextColor(textColor)
-                buttonTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#A5D6A7"))
+                buttonTintList = ColorStateList.valueOf(Color.parseColor("#A5D6A7"))
                 setPadding(12, 14, 12, 14)
             }
             radioGroup.addView(rb)
@@ -117,8 +104,6 @@ class MainActivity : AppCompatActivity() {
         styleActionButton(btnStop, "#7F1D1D")
 
         layout.addView(title)
-        layout.addView(scheduleInfo)
-        layout.addView(chkRotate)
         layout.addView(radioGroup)
         layout.addView(btnStart)
         layout.addView(btnTest)
@@ -131,7 +116,7 @@ class MainActivity : AppCompatActivity() {
             val selected = radioGroup.checkedRadioButtonId.takeIf { it in 1..5 } ?: 1
             prefs.edit()
                 .putInt("SELECTED_SOUND", selected)
-                .putBoolean("ROTATE_MODE", chkRotate.isChecked)
+                .putBoolean("ROTATE_MODE", savedRotate)
                 .putBoolean("ENABLED", true)
                 .apply()
 
