@@ -45,7 +45,7 @@ class MainActivity : AppCompatActivity() {
 
         val scrollView = ScrollView(this).apply {
             fillViewport = true
-            setBackgroundResource(R.drawable.bg_islamic)
+            setBackgroundResource(R.drawable.background)
         }
 
         val layout = LinearLayout(this).apply {
