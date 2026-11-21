@@ -44,7 +44,7 @@ class MainActivity : AppCompatActivity() {
         val isEnabled = prefs.getBoolean(KEY_ENABLED, false)
 
         val scrollView = ScrollView(this).apply {
-            fillViewport = true
+            isFillViewport = true
             setBackgroundResource(R.drawable.background)
         }
 
