@@ -11,16 +11,13 @@ import java.util.Calendar
 class AdhkarReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val prefs = context.getSharedPreferences("AdhkarPrefs", Context.MODE_PRIVATE)
-        val isEnabled = prefs.getBoolean("ENABLED", false)
-        if (!isEnabled) return
-
         if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
-            scheduleAll(context)
+            rescheduleAllActive(context)
             return
         }
-
-        val scheduleType = intent.getIntExtra(EXTRA_SCHEDULE_TYPE, TYPE_HOURLY_00)
-        val soundIndex = intent.getIntExtra(EXTRA_SOUND_INDEX, defaultSoundForType(scheduleType))
+        val soundIndex = intent.getIntExtra("SOUND_INDEX", -1)
+        if (soundIndex !in 1..5) return
+        if (!prefs.getBoolean("ACTIVE_$soundIndex", false)) return
 
         val serviceIntent = Intent(context, AudioPlayerService::class.java).apply {
             putExtra("SOUND_INDEX", soundIndex)
@@ -30,144 +27,73 @@ class AdhkarReceiver : BroadcastReceiver() {
         } else {
             context.startService(serviceIntent)
         }
-
-        rescheduleSingle(context, scheduleType, soundIndex)
+        scheduleForSound(context, soundIndex)
     }
-
     companion object {
-        const val EXTRA_SOUND_INDEX = "EXTRA_SOUND_INDEX"
-        const val EXTRA_SCHEDULE_TYPE = "EXTRA_SCHEDULE_TYPE"
+        const val FREQ_15M = 0
+        const val FREQ_30M = 1
+        const val FREQ_1H = 2
+        const val FREQ_DAILY = 3
 
-        const val TYPE_HOURLY_00 = 1
-        const val TYPE_HOURLY_15 = 2
-        const val TYPE_DAILY_830_AM = 3
-        const val TYPE_DAILY_830_PM = 4
-        const val TYPE_DAILY_930_AM = 5
-        const val TYPE_DAILY_930_PM = 6
-        const val TYPE_DAILY_1030_AM = 7
-        const val TYPE_DAILY_1030_PM = 8
-
-        private val allTypes = listOf(
-            TYPE_HOURLY_00,
-            TYPE_HOURLY_15,
-            TYPE_DAILY_830_AM,
-            TYPE_DAILY_830_PM,
-            TYPE_DAILY_930_AM,
-            TYPE_DAILY_930_PM,
-            TYPE_DAILY_1030_AM,
-            TYPE_DAILY_1030_PM
-        )
-
-        private fun defaultSoundForType(scheduleType: Int): Int = when (scheduleType) {
-            TYPE_HOURLY_00 -> 1
-            TYPE_HOURLY_15 -> 2
-            TYPE_DAILY_830_AM, TYPE_DAILY_830_PM -> 3
-            TYPE_DAILY_930_AM, TYPE_DAILY_930_PM -> 4
-            TYPE_DAILY_1030_AM, TYPE_DAILY_1030_PM -> 5
-            else -> 1
-        }
-
-        fun scheduleAll(context: Context) {
+        fun rescheduleAllActive(context: Context) {
             val prefs = context.getSharedPreferences("AdhkarPrefs", Context.MODE_PRIVATE)
-            val firstSound = prefs.getInt("SELECTED_SOUND", 1)
-            for (type in allTypes) {
-                val sound = if (type == TYPE_HOURLY_00) firstSound else defaultSoundForType(type)
-                rescheduleSingle(context, type, sound)
+            for (i in 1..5) {
+                if (prefs.getBoolean("ACTIVE_$i", false)) {
+                    scheduleForSound(context, i)
+                }
             }
         }
 
-        fun rescheduleSingle(context: Context, scheduleType: Int, soundIndex: Int) {
+        fun scheduleForSound(context: Context, soundIndex: Int) {
             val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
-                return
-            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) return
 
-            val triggerAtMillis = computeNextTriggerMillis(scheduleType)
-            val pendingIntent = buildPendingIntent(context, scheduleType, soundIndex)
+            val prefs = context.getSharedPreferences("AdhkarPrefs", Context.MODE_PRIVATE)
+            val freq = prefs.getInt("FREQ_$soundIndex", FREQ_1H)
+            val hour = prefs.getInt("HOUR_$soundIndex", 9)
+            val minute = prefs.getInt("MIN_$soundIndex", 0)
 
-            alarmManager.setExactAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                triggerAtMillis,
-                pendingIntent
-            )
+            val triggerAt = computeNextTrigger(freq, hour, minute)
+            val pi = buildPendingIntent(context, soundIndex)
+            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pi)
         }
-
-        fun cancelSchedule(context: Context) {
+        fun cancelForSound(context: Context, soundIndex: Int) {
             val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-            for (type in allTypes) {
-                val sound = defaultSoundForType(type)
-                val pendingIntent = buildPendingIntent(context, type, sound)
-                alarmManager.cancel(pendingIntent)
-            }
+            alarmManager.cancel(buildPendingIntent(context, soundIndex))
         }
 
-        private fun buildPendingIntent(
-            context: Context,
-            scheduleType: Int,
-            soundIndex: Int
-        ): PendingIntent {
+        fun cancelAll(context: Context) {
+            for (i in 1..5) cancelForSound(context, i)
+        }
+
+        private fun buildPendingIntent(context: Context, soundIndex: Int): PendingIntent {
             val intent = Intent(context, AdhkarReceiver::class.java).apply {
-                putExtra(EXTRA_SCHEDULE_TYPE, scheduleType)
-                putExtra(EXTRA_SOUND_INDEX, soundIndex)
+                putExtra("SOUND_INDEX", soundIndex)
             }
             return PendingIntent.getBroadcast(
-                context,
-                scheduleType,
-                intent,
+                context, soundIndex, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
         }
 
-        private fun computeNextTriggerMillis(scheduleType: Int): Long {
+        private fun computeNextTrigger(freq: Int, hour: Int, minute: Int): Long {
             val now = System.currentTimeMillis()
             val cal = Calendar.getInstance().apply {
                 set(Calendar.SECOND, 0)
                 set(Calendar.MILLISECOND, 0)
             }
-
-            return when (scheduleType) {
-                TYPE_HOURLY_00 -> {
-                    cal.set(Calendar.MINUTE, 0)
-                    if (cal.timeInMillis <= now) {
-                        cal.add(Calendar.HOUR_OF_DAY, 1)
-                    }
+            return when (freq) {
+                FREQ_15M -> now + 15 * 60 * 1000L
+                FREQ_30M -> now + 30 * 60 * 1000L
+                FREQ_1H -> now + 60 * 60 * 1000L
+                FREQ_DAILY -> {
+                    cal.set(Calendar.HOUR_OF_DAY, hour)
+                    cal.set(Calendar.MINUTE, minute)
+                    if (cal.timeInMillis <= now) cal.add(Calendar.DAY_OF_YEAR, 1)
                     cal.timeInMillis
                 }
-
-                TYPE_HOURLY_15 -> {
-                    cal.set(Calendar.MINUTE, 15)
-                    if (cal.timeInMillis <= now) {
-                        cal.add(Calendar.HOUR_OF_DAY, 1)
-                    }
-                    cal.timeInMillis
-                }
-
-                TYPE_DAILY_830_AM -> nextDailyMillis(cal, now, hourOfDay = 8, minute = 30)
-                TYPE_DAILY_830_PM -> nextDailyMillis(cal, now, hourOfDay = 20, minute = 30)
-                TYPE_DAILY_930_AM -> nextDailyMillis(cal, now, hourOfDay = 9, minute = 30)
-                TYPE_DAILY_930_PM -> nextDailyMillis(cal, now, hourOfDay = 21, minute = 30)
-                TYPE_DAILY_1030_AM -> nextDailyMillis(cal, now, hourOfDay = 10, minute = 30)
-                TYPE_DAILY_1030_PM -> nextDailyMillis(cal, now, hourOfDay = 22, minute = 30)
-                else -> {
-                    cal.set(Calendar.MINUTE, 0)
-                    if (cal.timeInMillis <= now) cal.add(Calendar.HOUR_OF_DAY, 1)
-                    cal.timeInMillis
-                }
+                else -> now + 60 * 60 * 1000L
             }
-        }
-
-        private fun nextDailyMillis(
-            cal: Calendar,
-            now: Long,
-            hourOfDay: Int,
-            minute: Int
-        ): Long {
-            cal.set(Calendar.HOUR_OF_DAY, hourOfDay)
-            cal.set(Calendar.MINUTE, minute)
-            if (cal.timeInMillis <= now) {
-                cal.add(Calendar.DAY_OF_YEAR, 1)
-            }
-            return cal.timeInMillis
         }
     }
 }
