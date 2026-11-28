@@ -7,17 +7,20 @@ class MainActivity : AppCompatActivity() {
     private val adhkarList = listOf(
         "الصلاة على النبي 1",
         "الصلاة على النبي 2",
+        "الصلاة على النبي 3",
         "التسبيح 1",
         "التسبيح 2",
-        "أحب الكلام إلى الله"
+        "أحب الكلام إلى الله",
+        "لا إله إلا الله",
+        "سيد الاستغفار"
     )
+
     private val freqLabels = arrayOf(
         "كل 15 دقيقة",
         "كل 30 دقيقة",
         "كل ساعة",
         "يومياً في ساعة محددة"
     )
-
     override fun onCreate(savedInstanceState: android.os.Bundle?) {
         super.onCreate(savedInstanceState)
         val prefs = getSharedPreferences("AdhkarPrefs", MODE_PRIVATE)
@@ -31,8 +34,8 @@ class MainActivity : AppCompatActivity() {
             setPadding(40, 56, 40, 48)
         }
         val title = android.widget.TextView(this).apply {
-            text = "ميراث النبي (تصميم محمد الدسوقي)"
-            textSize = 22f
+            text = "صل على الحبيب"
+            textSize = 24f
             setTextColor(android.graphics.Color.WHITE)
             setPadding(0, 0, 0, 24)
         }
@@ -118,12 +121,9 @@ class MainActivity : AppCompatActivity() {
         }
         val btnStopAll = android.widget.Button(this).apply {
             text = "إيقاف جميع التنبيهات"
-            textSize = 16f
-            setTextColor(android.graphics.Color.WHITE)
-            background = roundedBg("#7F1D1D", 24f)
-            layoutParams = android.widget.LinearLayout.LayoutParams(-1, -2).apply { topMargin = 8 }
+            // ... إعدادات المظهر والخط للزر ...
             setOnClickListener {
-                for (i in 1..5) prefs.edit().putBoolean("ACTIVE_$i", false).apply()
+                for (i in 1..8) prefs.edit().putBoolean("ACTIVE_$i", false).apply()
                 switches.forEach { it.isChecked = false }
                 AdhkarReceiver.cancelAll(this@MainActivity)
                 stopService(android.content.Intent(this@MainActivity, AudioPlayerService::class.java))
@@ -140,7 +140,6 @@ class MainActivity : AppCompatActivity() {
         sw.isChecked = true
         AdhkarReceiver.scheduleForSound(this, id)
     }
-
     private fun formatScheduleText(p: android.content.SharedPreferences, id: Int): String {
         val freq = p.getInt("FREQ_$id", AdhkarReceiver.FREQ_1H)
         return if (freq == AdhkarReceiver.FREQ_DAILY) {
@@ -149,7 +148,6 @@ class MainActivity : AppCompatActivity() {
             freqLabels.getOrElse(freq) { "كل ساعة" }
         }
     }
-
     private fun roundedBg(hex: String, r: Float) = android.graphics.drawable.GradientDrawable().apply {
         setColor(android.graphics.Color.parseColor(hex)); cornerRadius = r
     }
