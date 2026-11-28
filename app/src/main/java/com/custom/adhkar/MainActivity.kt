@@ -49,13 +49,24 @@ class MainActivity : AppCompatActivity() {
             orientation = android.widget.LinearLayout.VERTICAL
             setPadding(40, 56, 40, 48)
         }
-        val title = android.widget.TextView(this).apply {
+                val title = android.widget.TextView(this).apply {
             text = "صل على الحبيب"
-            textSize = 24f
+            textSize = 28f
+            gravity = android.view.Gravity.CENTER
+            setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(android.graphics.Color.WHITE)
+            setPadding(0, 0, 0, 4)
+        }
+        val subtitle = android.widget.TextView(this).apply {
+            text = "(تصميم محمد الدسوقي)"
+            textSize = 14f
+            gravity = android.view.Gravity.CENTER
+            setTextColor(android.graphics.Color.parseColor("#E0E0E0"))
             setPadding(0, 0, 0, 24)
         }
         root.addView(title)
+        root.addView(subtitle)
+
         val switches = mutableListOf<android.widget.Switch>()
 
         adhkarList.forEachIndexed { idx, name ->
