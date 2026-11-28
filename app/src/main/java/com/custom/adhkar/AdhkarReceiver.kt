@@ -33,14 +33,14 @@ class AdhkarReceiver : BroadcastReceiver() {
         const val FREQ_15M = 0
         const val FREQ_30M = 1
         const val FREQ_1H = 2
-        const val FREQ_DAILY = 3
+        const val FREQ_DAILY_AM = 3
+        const val FREQ_DAILY_PM = 4
+        const val FREQ_DAILY_BOTH = 5
 
         fun rescheduleAllActive(context: Context) {
             val prefs = context.getSharedPreferences("AdhkarPrefs", Context.MODE_PRIVATE)
             for (i in 1..8) {
-                if (prefs.getBoolean("ACTIVE_$i", false)) {
-                    scheduleForSound(context, i)
-                }
+                if (prefs.getBoolean("ACTIVE_$i", false)) scheduleForSound(context, i)
             }
         }
 
@@ -54,8 +54,7 @@ class AdhkarReceiver : BroadcastReceiver() {
             val minute = prefs.getInt("MIN_$soundIndex", 0)
 
             val triggerAt = computeNextTrigger(freq, hour, minute)
-            val pi = buildPendingIntent(context, soundIndex)
-            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pi)
+            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, buildPendingIntent(context, soundIndex))
         }
         fun cancelForSound(context: Context, soundIndex: Int) {
             val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
@@ -67,33 +66,33 @@ class AdhkarReceiver : BroadcastReceiver() {
         }
 
         private fun buildPendingIntent(context: Context, soundIndex: Int): PendingIntent {
-            val intent = Intent(context, AdhkarReceiver::class.java).apply {
-                putExtra("SOUND_INDEX", soundIndex)
-            }
-            return PendingIntent.getBroadcast(
-                context, soundIndex, intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
+            val intent = Intent(context, AdhkarReceiver::class.java).apply { putExtra("SOUND_INDEX", soundIndex) }
+            return PendingIntent.getBroadcast(context, soundIndex, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         }
 
         private fun computeNextTrigger(freq: Int, hour: Int, minute: Int): Long {
             val now = System.currentTimeMillis()
+            val h12 = hour % 12
+            val startHour = when (freq) {
+                FREQ_DAILY_AM -> h12
+                FREQ_DAILY_PM -> h12 + 12
+                else -> hour
+            }
+            val stepMillis = when (freq) {
+                FREQ_15M -> 15 * 60 * 1000L
+                FREQ_30M -> 30 * 60 * 1000L
+                FREQ_1H -> 60 * 60 * 1000L
+                FREQ_DAILY_BOTH -> 12 * 60 * 60 * 1000L
+                else -> 24 * 60 * 60 * 1000L
+            }
             val cal = Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, startHour)
+                set(Calendar.MINUTE, minute)
                 set(Calendar.SECOND, 0)
                 set(Calendar.MILLISECOND, 0)
             }
-            return when (freq) {
-                FREQ_15M -> now + 15 * 60 * 1000L
-                FREQ_30M -> now + 30 * 60 * 1000L
-                FREQ_1H -> now + 60 * 60 * 1000L
-                FREQ_DAILY -> {
-                    cal.set(Calendar.HOUR_OF_DAY, hour)
-                    cal.set(Calendar.MINUTE, minute)
-                    if (cal.timeInMillis <= now) cal.add(Calendar.DAY_OF_YEAR, 1)
-                    cal.timeInMillis
-                }
-                else -> now + 60 * 60 * 1000L
-            }
+            while (cal.timeInMillis <= now) cal.timeInMillis += stepMillis
+            return cal.timeInMillis
         }
     }
 }
