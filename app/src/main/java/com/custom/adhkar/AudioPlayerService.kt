@@ -20,7 +20,7 @@ class AudioPlayerService : Service() {
         createNotificationChannel()
 
         val notification = NotificationCompat.Builder(this, channelId)
-            .setContentTitle("أذكار الساعة")
+            .setContentTitle("صل على الحبيب")
             .setContentText("تشغيل الذكر المجدول...")
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -31,57 +31,39 @@ class AudioPlayerService : Service() {
         playAudio(soundIndex)
         return START_NOT_STICKY
     }
-
     private fun playAudio(index: Int) {
-    val resId = when (index) {
-        1 -> R.raw.dhikr_1
-        2 -> R.raw.dhikr_2
-        3 -> R.raw.dhikr_3
-        4 -> R.raw.dhikr_4
-        5 -> R.raw.dhikr_5
-        else -> R.raw.dhikr_1
-    }
-
-    mediaPlayer?.release()
-    val player = MediaPlayer.create(this, resId)
-    if (player == null) {
-        stopSelf()
-        return
-    }
-
-    mediaPlayer = player.apply {
-        setAudioAttributes(
-            AudioAttributes.Builder()
-                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                .setUsage(AudioAttributes.USAGE_ALARM)
-                .build()
-        )
-        setOnCompletionListener {
-            stopSelf()
+        val resId = when (index) {
+            1 -> R.raw.dhikr_1
+            2 -> R.raw.dhikr_2
+            3 -> R.raw.dhikr_6
+            4 -> R.raw.dhikr_3
+            5 -> R.raw.dhikr_4
+            6 -> R.raw.dhikr_5
+            7 -> R.raw.dhikr_7
+            8 -> R.raw.dhikr_8
+            else -> R.raw.dhikr_1
         }
-        start()
+        mediaPlayer?.release()
+        val player = MediaPlayer.create(this, resId) ?: run { stopSelf(); return }
+        mediaPlayer = player.apply {
+            setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                    .setUsage(AudioAttributes.USAGE_ALARM)
+                    .build()
+            )
+            setOnCompletionListener { stopSelf() }
+            start()
+        }
     }
-}
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                channelId,
-                "تنبيهات الأذكار الدقيقة",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                setSound(null, null)
-            }
-            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            manager.createNotificationChannel(channel)
+            val channel = NotificationChannel(channelId, "تنبيهات الأذكار", NotificationManager.IMPORTANCE_HIGH).apply { setSound(null, null) }
+            (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(channel)
         }
     }
 
-    override fun onDestroy() {
-        mediaPlayer?.release()
-        mediaPlayer = null
-        super.onDestroy()
-    }
-
+    override fun onDestroy() { mediaPlayer?.release(); mediaPlayer = null; super.onDestroy() }
     override fun onBind(intent: Intent?): IBinder? = null
 }
