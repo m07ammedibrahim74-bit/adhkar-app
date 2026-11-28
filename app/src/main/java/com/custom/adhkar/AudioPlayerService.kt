@@ -19,9 +19,20 @@ class AudioPlayerService : Service() {
         val soundIndex = intent?.getIntExtra("SOUND_INDEX", 1) ?: 1
         createNotificationChannel()
 
+        val dhikrName = when (soundIndex) {
+            1 -> "الصلاة على النبي 1"
+            2 -> "الصلاة على النبي 2"
+            3 -> "الصلاة على النبي 3"
+            4 -> "التسبيح 1"
+            5 -> "التسبيح 2"
+            6 -> "أحب الكلام إلى الله"
+            7 -> "لا إله إلا الله"
+            8 -> "سيد الاستغفار"
+            else -> "صل على الحبيب"
+        }
         val notification = NotificationCompat.Builder(this, channelId)
             .setContentTitle("صل على الحبيب")
-            .setContentText("ألا بذكر الله تطمئن القلوب...")
+            .setContentText(dhikrName)
             .setSmallIcon(R.drawable.app_icon)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
@@ -31,6 +42,7 @@ class AudioPlayerService : Service() {
         playAudio(soundIndex)
         return START_NOT_STICKY
     }
+
     private fun playAudio(index: Int) {
         val resId = when (index) {
             1 -> R.raw.dhikr_1
