@@ -16,7 +16,7 @@ class AdhkarReceiver : BroadcastReceiver() {
             return
         }
         val soundIndex = intent.getIntExtra("SOUND_INDEX", -1)
-        if (soundIndex !in 1..5) return
+        if (soundIndex !in 1..8) return
         if (!prefs.getBoolean("ACTIVE_$soundIndex", false)) return
 
         val serviceIntent = Intent(context, AudioPlayerService::class.java).apply {
@@ -37,7 +37,7 @@ class AdhkarReceiver : BroadcastReceiver() {
 
         fun rescheduleAllActive(context: Context) {
             val prefs = context.getSharedPreferences("AdhkarPrefs", Context.MODE_PRIVATE)
-            for (i in 1..5) {
+            for (i in 1..8) {
                 if (prefs.getBoolean("ACTIVE_$i", false)) {
                     scheduleForSound(context, i)
                 }
@@ -63,7 +63,7 @@ class AdhkarReceiver : BroadcastReceiver() {
         }
 
         fun cancelAll(context: Context) {
-            for (i in 1..5) cancelForSound(context, i)
+            for (i in 1..8) cancelForSound(context, i)
         }
 
         private fun buildPendingIntent(context: Context, soundIndex: Int): PendingIntent {
