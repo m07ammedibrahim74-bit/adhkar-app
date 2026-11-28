@@ -108,20 +108,24 @@ class MainActivity : AppCompatActivity() {
             }
             root.addView(card)
         }
-        val btnStopAll = android.widget.Button(this).apply {
-            text = "إيقاف جميع التنبيهات"
-            textSize = 16f
-            setTextColor(android.graphics.Color.WHITE)
-            background = roundedBg("#7F1D1D", 24f)
-            layoutParams = android.widget.LinearLayout.LayoutParams(-1, -2).apply { topMargin = 8 }
-            setOnClickListener {
-                for (i in 1..8) prefs.edit().putBoolean("ACTIVE_$i", false).apply()
-                switches.forEach { it.isChecked = false }
-                AdhkarReceiver.cancelAll(this@MainActivity)
-                stopService(android.content.Intent(this@MainActivity, AudioPlayerService::class.java))
-            }
-        }
-        root.addView(btnStopAll)
+             val btnAbout = android.widget.Button(this).apply {
+         text = "عن التطبيق"
+         textSize = 16f
+         setTextColor(android.graphics.Color.WHITE)
+         background = roundedBg("#9905261D", 24f)
+         layoutParams = android.widget.LinearLayout.LayoutParams(-1, -2).apply { topMargin = 8 }
+         setOnClickListener {
+             android.app.AlertDialog.Builder(this@MainActivity)
+                 .setTitle("عن التطبيق: صل على الحبيب")
+                 .setMessage("الإصدار: 2.0\n\nاللهم اجعل هذا العمل خالصاً لوجهك الكريم، واغفر لصاحبه ولمن ساهم فيه ولوالديه، وارزقهم شفاعة حبيبك المصطفى ﷺ.")
+                 .setPositiveButton("آمين", null)
+                 .setNegativeButton("رجوع", null)
+
+                 .show()
+         }
+     }
+     root.addView(btnAbout)
+
         scroll.addView(root)
         setContentView(scroll)
         askPermissions()
