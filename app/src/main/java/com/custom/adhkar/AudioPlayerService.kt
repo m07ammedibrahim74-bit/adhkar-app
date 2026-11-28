@@ -21,8 +21,8 @@ class AudioPlayerService : Service() {
 
         val notification = NotificationCompat.Builder(this, channelId)
             .setContentTitle("صل على الحبيب")
-            .setContentText("تشغيل الذكر المجدول...")
-            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setContentText("ألا بذكر الله تطمئن القلوب...")
+            .setSmallIcon(R.drawable.app_icon)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .build()
